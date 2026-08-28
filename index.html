@@ -43,16 +43,6 @@
   }
   button:active { background: #444; }
   button.primary { background: #0e639c; border-color: #0e639c; color: #fff; }
-  #modbar {
-    display: flex; align-items: center; gap: 6px;
-    padding: 6px 10px; background: #202021;
-    border-top: 1px solid #3c3c3c; border-bottom: 1px solid #3c3c3c;
-  }
-  #modbar button {
-    flex: 1; padding: 8px 4px; font-size: 12px; font-weight: 600;
-    min-height: 34px;
-  }
-  #modbar button.active { background: #0e639c; border-color: #0e639c; color: #fff; }
   #editor-container { position: absolute; inset: 0; }
   #status {
     padding: 4px 10px; font-size: 11px; color: #888;
@@ -105,11 +95,6 @@
     <button id="btn-copy">Copy</button>
     <button id="btn-download" class="primary">↓ .js</button>
     <button id="btn-reset">Reset</button>
-  </div>
-  <div id="modbar">
-    <button id="btn-mod-ctrl">Ctrl</button>
-    <button id="btn-mod-shift">Shift</button>
-    <button id="btn-mod-alt">Alt</button>
   </div>
   <div style="position: relative; flex: 1; min-height: 0;">
     <div id="loading">Memuat editor...</div>
@@ -190,9 +175,6 @@
   let editor = null;
   let pendingZipTypes = null;
   let currentFontSize = 14;
-  let modCtrl = false;
-  let modShift = false;
-  let modAlt = false;
 
   const defaultCode = [
     'import { world, system } from "@minecraft/server";',
@@ -253,8 +235,6 @@
 
     registerSnippets();
 
-    
-    
     monaco.editor.defineTheme('mc-dark', {
       base: 'vs-dark',
       inherit: true,
@@ -277,8 +257,6 @@
       modelUri
     );
 
-    
-    
     editor = monaco.editor.create(document.getElementById('editor-container'), {
       model: model,
       theme: 'mc-dark',
@@ -289,7 +267,6 @@
       wordWrap: 'on',
       scrollBeyondLastLine: false,
       tabSize: 2,
-      
       accessibilitySupport: 'off',
       smoothScrolling: false,
       occurrencesHighlight: false,
@@ -307,8 +284,6 @@
       localStorage.setItem(CODE_KEY, editor.getValue());
     });
 
-    setupModifierKeys();
-    attachDeleteFix();
     markSelectedFont(savedFont);
 
     document.getElementById('loading').style.display = 'none';
@@ -321,8 +296,6 @@
       setTimeout(() => { if (editor) editor.layout(); }, 200);
     });
 
-    
-    
     const savedTypesRaw = localStorage.getItem(TYPES_KEY);
     if (savedTypesRaw) {
       setTimeout(() => {
@@ -334,7 +307,6 @@
     }
   }
 
-  
   function registerSnippets() {
     monaco.languages.registerCompletionItemProvider('javascript', {
       provideCompletionItems: (model, position) => {
@@ -371,21 +343,6 @@
     });
   }
 
-  
-  
-  function attachDeleteFix() {
-    const domNode = editor.getDomNode();
-    domNode.addEventListener('beforeinput', (e) => {
-      if (e.inputType === 'deleteContentBackward') {
-        e.preventDefault();
-        editor.trigger('keyboard', 'deleteLeft', null);
-      } else if (e.inputType === 'deleteContentForward') {
-        e.preventDefault();
-        editor.trigger('keyboard', 'deleteRight', null);
-      }
-    }, true);
-  }
-
   function registerTypes(typesMap) {
     try {
       let count = 0;
@@ -409,7 +366,6 @@
       : 'Belum ada types. Tekan "Types" lalu pilih file ZIP.';
   }
 
-  
   document.getElementById('btn-types').addEventListener('click', () => {
     document.getElementById('overlay').classList.add('show');
   });
@@ -499,7 +455,6 @@
     }
   });
 
-  
   function fontFamilyFor(choice) {
     if (choice === 'mc-ten') return "'Minecraft', monospace";
     if (choice === 'mc-ia') return "'Minecraftia', monospace";
@@ -536,7 +491,6 @@
     });
   });
 
-  
   function getSelectedOrAllText() {
     const sel = editor.getSelection();
     const model = editor.getModel();
@@ -594,76 +548,6 @@
     setTimeout(() => { btn.textContent = original; }, 1000);
   });
 
-  
-  function adjustFontSize(delta) {
-    currentFontSize = Math.min(32, Math.max(10, currentFontSize + delta));
-    editor.updateOptions({ fontSize: currentFontSize });
-    localStorage.setItem(FONT_SIZE_KEY, String(currentFontSize));
-  }
-
-  function clearMods() {
-    modCtrl = false; modShift = false; modAlt = false;
-    document.getElementById('btn-mod-ctrl').classList.remove('active');
-    document.getElementById('btn-mod-shift').classList.remove('active');
-    document.getElementById('btn-mod-alt').classList.remove('active');
-  }
-
-  function bindModButton(id, getter, setter) {
-    document.getElementById(id).addEventListener('click', () => {
-      setter(!getter());
-      document.getElementById(id).classList.toggle('active', getter());
-      if (editor) editor.focus();
-    });
-  }
-  bindModButton('btn-mod-ctrl', () => modCtrl, (v) => { modCtrl = v; });
-  bindModButton('btn-mod-shift', () => modShift, (v) => { modShift = v; });
-  bindModButton('btn-mod-alt', () => modAlt, (v) => { modAlt = v; });
-
-  function setupModifierKeys() {
-    const domNode = editor.getDomNode();
-    domNode.addEventListener('keydown', (e) => {
-      if (!modCtrl && !modAlt) return;
-
-      const key = e.key;
-      const lower = key.length === 1 ? key.toLowerCase() : key;
-      let handled = false;
-
-      if (modCtrl && modShift) {
-        if (lower === 'z') { editor.trigger('keyboard', 'redo'); handled = true; }
-      } else if (modCtrl && !modAlt) {
-        switch (lower) {
-          case 'a':
-            editor.setSelection(editor.getModel().getFullModelRange());
-            handled = true; break;
-          case 'c': copyAction(); handled = true; break;
-          case 'x': cutAction(); handled = true; break;
-          case 'v': pasteAction(); handled = true; break;
-          case 'z': editor.trigger('keyboard', 'undo'); handled = true; break;
-          case 'y': editor.trigger('keyboard', 'redo'); handled = true; break;
-          case 'f': { const a = editor.getAction('actions.find'); if (a) a.run(); handled = true; break; }
-          case '/': { const a = editor.getAction('editor.action.commentLine'); if (a) a.run(); handled = true; break; }
-          case '+': case '=': adjustFontSize(1); handled = true; break;
-          case '-': adjustFontSize(-1); handled = true; break;
-        }
-      } else if (modAlt && !modCtrl) {
-        if (key === 'ArrowUp') {
-          const a = editor.getAction('editor.action.moveLinesUpAction'); if (a) a.run(); handled = true;
-        } else if (key === 'ArrowDown') {
-          const a = editor.getAction('editor.action.moveLinesDownAction'); if (a) a.run(); handled = true;
-        }
-      }
-
-      if (handled) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-      if (key !== 'Control' && key !== 'Shift' && key !== 'Alt') {
-        clearMods();
-      }
-    }, true);
-  }
-
-  
   document.getElementById('btn-download').addEventListener('click', () => {
     const content = editor ? editor.getValue() : defaultCode;
     const blob = new Blob([content], { type: 'text/javascript' });
@@ -686,12 +570,9 @@
     location.reload();
   });
 
-  
-  
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('service-worker.js').catch(() => {
-        
       });
     });
   }
