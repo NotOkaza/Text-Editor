@@ -1,15 +1,17 @@
 {
-  "name": "Text Editor",
-  "short_name": "Text Editor",
-  "start_url": "index.html",
+  "name": "MC Script Editor",
+  "short_name": "MC Editor",
+  "description": "Editor JavaScript offline dengan autocomplete @minecraft/server",
+  "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "orientation": "any",
+  "background_color": "#1e1e1e",
+  "theme_color": "#252526",
   "icons": [
-    {
-      "src": "icon.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

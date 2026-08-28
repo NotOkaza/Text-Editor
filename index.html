@@ -2,9 +2,26 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content" />
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" />
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icon-192.png" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<meta name="theme-color" content="#252526" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <title>MC Script Editor</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/typeface-minecraft@1.0.0/index.css" />
 <style>
+  @font-face {
+    font-family: 'Minecraftia';
+    src: url('https://github.com/Overv/WebCraft/raw/refs/heads/master/style/minecraftia.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+  }
   * { box-sizing: border-box; }
   html, body {
     margin: 0; padding: 0; height: 100%;
@@ -21,36 +38,52 @@
   #topbar h1 { font-size: 14px; font-weight: 500; margin: 0 8px 0 0; color: #fff; white-space: nowrap; }
   button {
     background: #333; color: #ddd; border: 1px solid #4a4a4a;
-    border-radius: 6px; padding: 7px 12px; font-size: 13px;
-    cursor: pointer;
+    border-radius: 6px; padding: 8px 12px; font-size: 13px;
+    cursor: pointer; min-height: 36px;
   }
   button:active { background: #444; }
   button.primary { background: #0e639c; border-color: #0e639c; color: #fff; }
+  #modbar {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 10px; background: #202021;
+    border-top: 1px solid #3c3c3c; border-bottom: 1px solid #3c3c3c;
+  }
+  #modbar button {
+    flex: 1; padding: 8px 4px; font-size: 12px; font-weight: 600;
+    min-height: 34px;
+  }
+  #modbar button.active { background: #0e639c; border-color: #0e639c; color: #fff; }
   #editor-container { position: absolute; inset: 0; }
   #status {
     padding: 4px 10px; font-size: 11px; color: #888;
     background: #252526; border-top: 1px solid #3c3c3c;
   }
-  #overlay {
+  #overlay, #font-overlay {
     display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.7);
     z-index: 10; align-items: center; justify-content: center; padding: 16px;
   }
-  #overlay.show { display: flex; }
-  #panel {
+  #overlay.show, #font-overlay.show { display: flex; }
+  #panel, #font-panel {
     background: #252526; border: 1px solid #4a4a4a; border-radius: 10px;
     padding: 16px; width: 100%; max-width: 480px;
     display: flex; flex-direction: column; gap: 10px;
   }
-  #panel h2 { margin: 0; font-size: 15px; color: #fff; }
-  #panel p { margin: 0; font-size: 12px; color: #999; line-height: 1.5; }
+  #panel h2, #font-panel h2 { margin: 0; font-size: 15px; color: #fff; }
+  #panel p, #font-panel p { margin: 0; font-size: 12px; color: #999; line-height: 1.5; }
   #file-drop {
     border: 2px dashed #4a4a4a; border-radius: 8px; padding: 24px 12px;
     text-align: center; font-size: 13px; color: #999;
   }
-  #file-name { font-size: 12px; color: #4fc3f7; word-break: break-all; }
   .fname { font-size: 11px; color: #666; margin: 4px 0 0; word-break: break-all; }
   .fname.picked { color: #4fc3f7; }
-  #panel-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  #panel-actions, #font-panel-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .font-choice {
+    text-align: left; padding: 12px; border-radius: 8px; background: #1e1e1e;
+    border: 1px solid #4a4a4a;
+  }
+  .font-choice.selected { border-color: #0e639c; background: #16324a; }
+  .font-choice .fc-label { font-size: 13px; color: #fff; margin-bottom: 2px; }
+  .font-choice .fc-preview { font-size: 18px; color: #ddd; }
   #loading {
     position: absolute; inset: 0; display: flex; align-items: center;
     justify-content: center; background: #1e1e1e; color: #888; font-size: 13px;
@@ -67,16 +100,23 @@
 <div id="app">
   <div id="topbar">
     <h1>MC Script Editor</h1>
-    <button id="btn-types">Atur types</button>
-    <button id="btn-download" class="primary">Download .js</button>
+    <button id="btn-types">Types</button>
+    <button id="btn-font">Font</button>
+    <button id="btn-copy">Copy</button>
+    <button id="btn-download" class="primary">↓ .js</button>
     <button id="btn-reset">Reset</button>
+  </div>
+  <div id="modbar">
+    <button id="btn-mod-ctrl">Ctrl</button>
+    <button id="btn-mod-shift">Shift</button>
+    <button id="btn-mod-alt">Alt</button>
   </div>
   <div style="position: relative; flex: 1; min-height: 0;">
     <div id="loading">Memuat editor...</div>
     <div id="err-box"></div>
     <div id="editor-container"></div>
   </div>
-  <div id="status">Belum ada types. Tekan "Atur types" lalu pilih file ZIP.</div>
+  <div id="status">Belum ada types. Tekan "Types" lalu pilih file ZIP.</div>
 </div>
 
 <div id="overlay">
@@ -106,12 +146,34 @@
   </div>
 </div>
 
+<div id="font-overlay">
+  <div id="font-panel">
+    <h2>Gaya font</h2>
+    <p>Pilih tampilan teks editor. Ukuran bisa disesuaikan lagi lewat Ctrl + / -.</p>
+    <button class="font-choice" data-font="default">
+      <div class="fc-label">Default</div>
+      <div class="fc-preview" style="font-family:Consolas,'Courier New',monospace;">world.sendMessage("Hi");</div>
+    </button>
+    <button class="font-choice" data-font="mc-ten">
+      <div class="fc-label">Minecraft Ten (besar)</div>
+      <div class="fc-preview" style="font-family:'Minecraft',monospace;">world.sendMessage("Hi");</div>
+    </button>
+    <button class="font-choice" data-font="mc-ia">
+      <div class="fc-label">Minecraftia (kecil)</div>
+      <div class="fc-preview" style="font-family:'Minecraftia',monospace;">world.sendMessage("Hi");</div>
+    </button>
+    <div id="font-panel-actions">
+      <button id="btn-font-close">Tutup</button>
+    </div>
+  </div>
+</div>
+
 <script>
-  window.addEventListener('error', function (e) {
+  window.addEventListener('error', (e) => {
     showError('Error: ' + e.message + '\n' + (e.filename || '') + ':' + (e.lineno || ''));
   });
   function showError(msg) {
-    var box = document.getElementById('err-box');
+    const box = document.getElementById('err-box');
     box.textContent = msg;
     box.style.display = 'block';
     document.getElementById('loading').style.display = 'none';
@@ -120,17 +182,19 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
 <script>
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js')
-      .then(() => console.log('Service Worker Registered'))
-      .catch(err => console.log('Service Worker Failed', err));
-  }
-  var CODE_KEY = 'mc-editor-code';
-  var TYPES_KEY = 'mc-editor-types';
-  var editor = null;
-  var pendingFiles = {};
+  const CODE_KEY = 'mc-editor-code';
+  const TYPES_KEY = 'mc-editor-types';
+  const FONT_KEY = 'mc-editor-font';
+  const FONT_SIZE_KEY = 'mc-editor-fontsize';
 
-  var defaultCode = [
+  let editor = null;
+  let pendingZipTypes = null;
+  let currentFontSize = 14;
+  let modCtrl = false;
+  let modShift = false;
+  let modAlt = false;
+
+  const defaultCode = [
     'import { world, system } from "@minecraft/server";',
     '',
     'world.afterEvents.entityHitEntity.subscribe((event) => {',
@@ -142,15 +206,15 @@ if ('serviceWorker' in navigator) {
   if (typeof require === 'undefined') {
     showError('Gagal memuat loader Monaco Editor. Cek koneksi internet dan coba refresh.');
   } else {
-    var VS_BASE = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs';
+    const VS_BASE = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs';
 
     self.MonacoEnvironment = {
-      getWorkerUrl: function () {
-        var proxyCode = [
+      getWorkerUrl: () => {
+        const proxyCode = [
           'self.MonacoEnvironment = { baseUrl: "' + VS_BASE + '/../" };',
           'importScripts("' + VS_BASE + '/base/worker/workerMain.js");'
         ].join('\n');
-        var blob = new Blob([proxyCode], { type: 'text/javascript' });
+        const blob = new Blob([proxyCode], { type: 'text/javascript' });
         return URL.createObjectURL(blob);
       }
     };
@@ -158,13 +222,13 @@ if ('serviceWorker' in navigator) {
     require.config({ paths: { vs: VS_BASE } });
 
     try {
-      require(['vs/editor/editor.main'], function () {
+      require(['vs/editor/editor.main'], () => {
         try {
           initEditor();
         } catch (e) {
           showError('Gagal inisialisasi editor: ' + e.message);
         }
-      }, function (err) {
+      }, (err) => {
         showError('Gagal memuat modul Monaco: ' + (err && err.message ? err.message : JSON.stringify(err)));
       });
     } catch (e) {
@@ -187,54 +251,145 @@ if ('serviceWorker' in navigator) {
       noSyntaxValidation: false
     });
 
-    var savedTypesRaw = localStorage.getItem(TYPES_KEY);
-    var savedCount = 0;
-    if (savedTypesRaw) {
-      try {
-        var savedTypesMap = JSON.parse(savedTypesRaw);
-        savedCount = registerTypes(savedTypesMap);
-      } catch (e) {}
-    }
+    registerSnippets();
 
-    var savedCode = localStorage.getItem(CODE_KEY);
-    var modelUri = monaco.Uri.parse('file:///main.js');
-    var model = monaco.editor.getModel(modelUri) || monaco.editor.createModel(
+    
+    
+    monaco.editor.defineTheme('mc-dark', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [],
+      colors: {
+        'editorGutter.background': '#1e1e1e',
+        'editor.background': '#1e1e1e'
+      }
+    });
+
+    const savedFont = localStorage.getItem(FONT_KEY) || 'default';
+    const savedSizeRaw = localStorage.getItem(FONT_SIZE_KEY);
+    currentFontSize = savedSizeRaw ? parseInt(savedSizeRaw, 10) : fontDefaultSize(savedFont);
+
+    const savedCode = localStorage.getItem(CODE_KEY);
+    const modelUri = monaco.Uri.parse('file:///main.js');
+    const model = monaco.editor.getModel(modelUri) || monaco.editor.createModel(
       savedCode !== null ? savedCode : defaultCode,
       'javascript',
       modelUri
     );
+
+    
+    
     editor = monaco.editor.create(document.getElementById('editor-container'), {
       model: model,
-      theme: 'vs-dark',
-      fontSize: 14,
+      theme: 'mc-dark',
+      fontFamily: fontFamilyFor(savedFont),
+      fontSize: currentFontSize,
       minimap: { enabled: false },
       automaticLayout: true,
       wordWrap: 'on',
       scrollBeyondLastLine: false,
-      tabSize: 2
+      tabSize: 2,
+      
+      accessibilitySupport: 'off',
+      smoothScrolling: false,
+      occurrencesHighlight: false,
+      folding: false,
+      links: false,
+      renderWhitespace: 'none',
+      parameterHints: { enabled: false },
+      quickSuggestionsDelay: 200,
+      bracketPairColorization: { enabled: false },
+      wordBasedSuggestions: 'off',
+      unicodeHighlight: { ambiguousCharacters: false }
     });
 
-    editor.onDidChangeModelContent(function () {
+    editor.onDidChangeModelContent(() => {
       localStorage.setItem(CODE_KEY, editor.getValue());
     });
 
-    document.getElementById('loading').style.display = 'none';
-    updateStatus(savedCount);
+    setupModifierKeys();
+    attachDeleteFix();
+    markSelectedFont(savedFont);
 
-    setTimeout(function () { editor.layout(); }, 50);
-    setTimeout(function () { editor.layout(); }, 300);
-    window.addEventListener('resize', function () {
-      if (editor) editor.layout();
+    document.getElementById('loading').style.display = 'none';
+    updateStatus(0);
+
+    setTimeout(() => editor.layout(), 50);
+    setTimeout(() => editor.layout(), 300);
+    window.addEventListener('resize', () => { if (editor) editor.layout(); });
+    window.addEventListener('orientationchange', () => {
+      setTimeout(() => { if (editor) editor.layout(); }, 200);
     });
-    window.addEventListener('orientationchange', function () {
-      setTimeout(function () { if (editor) editor.layout(); }, 200);
+
+    
+    
+    const savedTypesRaw = localStorage.getItem(TYPES_KEY);
+    if (savedTypesRaw) {
+      setTimeout(() => {
+        try {
+          const count = registerTypes(JSON.parse(savedTypesRaw));
+          updateStatus(count);
+        } catch (e) {}
+      }, 150);
+    }
+  }
+
+  
+  function registerSnippets() {
+    monaco.languages.registerCompletionItemProvider('javascript', {
+      provideCompletionItems: (model, position) => {
+        const word = model.getWordUntilPosition(position);
+        const range = {
+          startLineNumber: position.lineNumber,
+          endLineNumber: position.lineNumber,
+          startColumn: word.startColumn,
+          endColumn: word.endColumn
+        };
+        return {
+          suggestions: [
+            {
+              label: 'arrowCallback',
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: '() => {$0}',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'Arrow function callback kosong',
+              filterText: 'arrowCallback',
+              range: range
+            },
+            {
+              label: 'function$',
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: 'function ${1:name}(${2:params}) {\n$0}',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'Deklarasi function standar',
+              filterText: 'function$',
+              range: range
+            }
+          ]
+        };
+      }
     });
   }
 
-function registerTypes(typesMap) {
+  
+  
+  function attachDeleteFix() {
+    const domNode = editor.getDomNode();
+    domNode.addEventListener('beforeinput', (e) => {
+      if (e.inputType === 'deleteContentBackward') {
+        e.preventDefault();
+        editor.trigger('keyboard', 'deleteLeft', null);
+      } else if (e.inputType === 'deleteContentForward') {
+        e.preventDefault();
+        editor.trigger('keyboard', 'deleteRight', null);
+      }
+    }, true);
+  }
+
+  function registerTypes(typesMap) {
     try {
-      var count = 0;
-      for (var virtualPath in typesMap) {
+      let count = 0;
+      for (const virtualPath in typesMap) {
         monaco.languages.typescript.javascriptDefaults.addExtraLib(
           typesMap[virtualPath], 'file:///node_modules/' + virtualPath
         );
@@ -248,42 +403,36 @@ function registerTypes(typesMap) {
   }
 
   function updateStatus(fileCount) {
-    var statusEl = document.getElementById('status');
-    if (fileCount) {
-      statusEl.textContent = fileCount + ' file .d.ts aktif. Autocomplete siap dipakai offline.';
-    } else {
-      statusEl.textContent = 'Belum ada types. Tekan "Atur types" lalu pilih file ZIP.';
-    }
+    const statusEl = document.getElementById('status');
+    statusEl.textContent = fileCount
+      ? fileCount + ' file .d.ts aktif. Autocomplete siap dipakai offline.'
+      : 'Belum ada types. Tekan "Types" lalu pilih file ZIP.';
   }
 
-  document.getElementById('btn-types').addEventListener('click', function () {
+  
+  document.getElementById('btn-types').addEventListener('click', () => {
     document.getElementById('overlay').classList.add('show');
   });
-
-  document.getElementById('btn-cancel').addEventListener('click', function () {
+  document.getElementById('btn-cancel').addEventListener('click', () => {
     document.getElementById('overlay').classList.remove('show');
   });
 
   function logZip(msg) {
-    var el = document.getElementById('zip-log');
+    const el = document.getElementById('zip-log');
     el.textContent += msg + '\n';
     el.scrollTop = el.scrollHeight;
   }
 
-  // Normalisasi path di dalam zip supaya jadi node_modules/@minecraft/<pkg>/<sisanya>
-  // terlepas dari apakah zip di-root-kan dari folder @minecraft, node_modules, atau lainnya.
   function normalizeZipPath(entryPath) {
-    var idx = entryPath.indexOf('@minecraft/');
-    if (idx !== -1) {
-      return entryPath.substring(idx);
-    }
+    const idx = entryPath.indexOf('@minecraft/');
+    if (idx !== -1) return entryPath.substring(idx);
     return '@minecraft/' + entryPath.replace(/^\/+/, '');
   }
 
-  document.getElementById('file-zip').addEventListener('change', function (e) {
-    var file = e.target.files[0];
-    var labelEl = document.getElementById('fname-zip');
-    var logEl = document.getElementById('zip-log');
+  document.getElementById('file-zip').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    const labelEl = document.getElementById('fname-zip');
+    const logEl = document.getElementById('zip-log');
     logEl.textContent = '';
     if (!file) {
       labelEl.textContent = 'Belum dipilih';
@@ -298,50 +447,43 @@ function registerTypes(typesMap) {
       return;
     }
 
-    file.arrayBuffer().then(function (buf) {
-      return JSZip.loadAsync(buf);
-    }).then(function (zip) {
-      var entries = [];
-      zip.forEach(function (relPath, zipEntry) {
+    file.arrayBuffer().then((buf) => JSZip.loadAsync(buf)).then((zip) => {
+      const entries = [];
+      zip.forEach((relPath, zipEntry) => {
         if (!zipEntry.dir && /\.d\.ts$/i.test(relPath)) {
           entries.push({ path: relPath, entry: zipEntry });
         }
       });
       if (entries.length === 0) {
         logZip('Tidak ada file .d.ts ditemukan di dalam ZIP ini.');
-        return Promise.resolve(null);
+        return null;
       }
       logZip('Ditemukan ' + entries.length + ' file .d.ts, membaca isinya...');
-      return Promise.all(entries.map(function (item) {
-        return item.entry.async('string').then(function (text) {
-          return { path: normalizeZipPath(item.path), content: text };
-        });
-      }));
-    }).then(function (results) {
+      return Promise.all(entries.map((item) =>
+        item.entry.async('string').then((text) => ({ path: normalizeZipPath(item.path), content: text }))
+      ));
+    }).then((results) => {
       if (!results) return;
-      var typesMap = {};
-      results.forEach(function (r) {
+      const typesMap = {};
+      results.forEach((r) => {
         typesMap[r.path] = r.content;
         logZip('  + ' + r.path);
       });
       pendingZipTypes = typesMap;
       logZip('Selesai. Tekan Simpan untuk mengaktifkan.');
       labelEl.textContent = file.name + ' - ' + results.length + ' file .d.ts siap disimpan';
-    }).catch(function (err) {
+    }).catch((err) => {
       logZip('Gagal membaca ZIP: ' + err.message);
     });
   });
 
-  var pendingZipTypes = null;
-
-  document.getElementById('btn-save-types').addEventListener('click', function () {
+  document.getElementById('btn-save-types').addEventListener('click', () => {
     if (!pendingZipTypes) {
-      var oldRaw = localStorage.getItem(TYPES_KEY);
+      const oldRaw = localStorage.getItem(TYPES_KEY);
       if (oldRaw) {
         try {
-          var oldMap = JSON.parse(oldRaw);
-          var ok = registerTypes(oldMap);
-          updateStatus(ok);
+          const count = registerTypes(JSON.parse(oldRaw));
+          updateStatus(count);
           document.getElementById('overlay').classList.remove('show');
           return;
         } catch (e) {}
@@ -350,18 +492,183 @@ function registerTypes(typesMap) {
       return;
     }
     localStorage.setItem(TYPES_KEY, JSON.stringify(pendingZipTypes));
-    var count = registerTypes(pendingZipTypes);
+    const count = registerTypes(pendingZipTypes);
     if (count) {
       updateStatus(count);
       document.getElementById('overlay').classList.remove('show');
     }
   });
 
-  document.getElementById('btn-download').addEventListener('click', function () {
-    var content = editor ? editor.getValue() : defaultCode;
-    var blob = new Blob([content], { type: 'text/javascript' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
+  
+  function fontFamilyFor(choice) {
+    if (choice === 'mc-ten') return "'Minecraft', monospace";
+    if (choice === 'mc-ia') return "'Minecraftia', monospace";
+    return "Consolas, 'Courier New', monospace";
+  }
+  function fontDefaultSize(choice) {
+    if (choice === 'mc-ten') return 22;
+    if (choice === 'mc-ia') return 12;
+    return 14;
+  }
+  function markSelectedFont(choice) {
+    document.querySelectorAll('.font-choice').forEach((el) => {
+      el.classList.toggle('selected', el.dataset.font === choice);
+    });
+  }
+  function selectFont(choice) {
+    currentFontSize = fontDefaultSize(choice);
+    editor.updateOptions({ fontFamily: fontFamilyFor(choice), fontSize: currentFontSize });
+    localStorage.setItem(FONT_KEY, choice);
+    localStorage.setItem(FONT_SIZE_KEY, String(currentFontSize));
+    markSelectedFont(choice);
+  }
+
+  document.getElementById('btn-font').addEventListener('click', () => {
+    document.getElementById('font-overlay').classList.add('show');
+  });
+  document.getElementById('btn-font-close').addEventListener('click', () => {
+    document.getElementById('font-overlay').classList.remove('show');
+  });
+  document.querySelectorAll('.font-choice').forEach((el) => {
+    el.addEventListener('click', () => {
+      selectFont(el.dataset.font);
+      document.getElementById('font-overlay').classList.remove('show');
+    });
+  });
+
+  
+  function getSelectedOrAllText() {
+    const sel = editor.getSelection();
+    const model = editor.getModel();
+    return (sel && !sel.isEmpty()) ? model.getValueInRange(sel) : model.getValue();
+  }
+  function writeClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+    } else {
+      fallbackCopy(text);
+    }
+  }
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+  function copyAction() {
+    writeClipboard(getSelectedOrAllText());
+  }
+  function cutAction() {
+    const sel = editor.getSelection();
+    const model = editor.getModel();
+    if (sel && !sel.isEmpty()) {
+      writeClipboard(model.getValueInRange(sel));
+      editor.executeEdits('cut', [{ range: sel, text: '' }]);
+    } else {
+      writeClipboard(model.getValue());
+    }
+  }
+  function pasteAction() {
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText().then((text) => {
+        const sel = editor.getSelection();
+        editor.executeEdits('paste', [{ range: sel, text: text }]);
+      }).catch(() => {
+        alert('Gagal ambil clipboard otomatis. Coba tempel manual lewat tombol paste keyboard.');
+      });
+    } else {
+      alert('Browser tidak mendukung baca clipboard otomatis. Coba tempel manual lewat tombol paste keyboard.');
+    }
+  }
+
+  document.getElementById('btn-copy').addEventListener('click', () => {
+    copyAction();
+    const btn = document.getElementById('btn-copy');
+    const original = btn.textContent;
+    btn.textContent = 'Tersalin!';
+    setTimeout(() => { btn.textContent = original; }, 1000);
+  });
+
+  
+  function adjustFontSize(delta) {
+    currentFontSize = Math.min(32, Math.max(10, currentFontSize + delta));
+    editor.updateOptions({ fontSize: currentFontSize });
+    localStorage.setItem(FONT_SIZE_KEY, String(currentFontSize));
+  }
+
+  function clearMods() {
+    modCtrl = false; modShift = false; modAlt = false;
+    document.getElementById('btn-mod-ctrl').classList.remove('active');
+    document.getElementById('btn-mod-shift').classList.remove('active');
+    document.getElementById('btn-mod-alt').classList.remove('active');
+  }
+
+  function bindModButton(id, getter, setter) {
+    document.getElementById(id).addEventListener('click', () => {
+      setter(!getter());
+      document.getElementById(id).classList.toggle('active', getter());
+      if (editor) editor.focus();
+    });
+  }
+  bindModButton('btn-mod-ctrl', () => modCtrl, (v) => { modCtrl = v; });
+  bindModButton('btn-mod-shift', () => modShift, (v) => { modShift = v; });
+  bindModButton('btn-mod-alt', () => modAlt, (v) => { modAlt = v; });
+
+  function setupModifierKeys() {
+    const domNode = editor.getDomNode();
+    domNode.addEventListener('keydown', (e) => {
+      if (!modCtrl && !modAlt) return;
+
+      const key = e.key;
+      const lower = key.length === 1 ? key.toLowerCase() : key;
+      let handled = false;
+
+      if (modCtrl && modShift) {
+        if (lower === 'z') { editor.trigger('keyboard', 'redo'); handled = true; }
+      } else if (modCtrl && !modAlt) {
+        switch (lower) {
+          case 'a':
+            editor.setSelection(editor.getModel().getFullModelRange());
+            handled = true; break;
+          case 'c': copyAction(); handled = true; break;
+          case 'x': cutAction(); handled = true; break;
+          case 'v': pasteAction(); handled = true; break;
+          case 'z': editor.trigger('keyboard', 'undo'); handled = true; break;
+          case 'y': editor.trigger('keyboard', 'redo'); handled = true; break;
+          case 'f': { const a = editor.getAction('actions.find'); if (a) a.run(); handled = true; break; }
+          case '/': { const a = editor.getAction('editor.action.commentLine'); if (a) a.run(); handled = true; break; }
+          case '+': case '=': adjustFontSize(1); handled = true; break;
+          case '-': adjustFontSize(-1); handled = true; break;
+        }
+      } else if (modAlt && !modCtrl) {
+        if (key === 'ArrowUp') {
+          const a = editor.getAction('editor.action.moveLinesUpAction'); if (a) a.run(); handled = true;
+        } else if (key === 'ArrowDown') {
+          const a = editor.getAction('editor.action.moveLinesDownAction'); if (a) a.run(); handled = true;
+        }
+      }
+
+      if (handled) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      if (key !== 'Control' && key !== 'Shift' && key !== 'Alt') {
+        clearMods();
+      }
+    }, true);
+  }
+
+  
+  document.getElementById('btn-download').addEventListener('click', () => {
+    const content = editor ? editor.getValue() : defaultCode;
+    const blob = new Blob([content], { type: 'text/javascript' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
     a.href = url;
     a.download = 'main.js';
     document.body.appendChild(a);
@@ -370,12 +677,24 @@ function registerTypes(typesMap) {
     URL.revokeObjectURL(url);
   });
 
-  document.getElementById('btn-reset').addEventListener('click', function () {
+  document.getElementById('btn-reset').addEventListener('click', () => {
     if (!confirm('Hapus semua kode dan types tersimpan?')) return;
     localStorage.removeItem(CODE_KEY);
     localStorage.removeItem(TYPES_KEY);
+    localStorage.removeItem(FONT_KEY);
+    localStorage.removeItem(FONT_SIZE_KEY);
     location.reload();
   });
+
+  
+  
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('service-worker.js').catch(() => {
+        
+      });
+    });
+  }
 </script>
 </body>
 </html>
