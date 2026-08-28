@@ -95,6 +95,7 @@
     <button id="btn-copy">Copy</button>
     <button id="btn-download" class="primary">↓ .js</button>
     <button id="btn-reset">Reset</button>
+    <button id="btn-backspace">Hapus</button>
   </div>
   <div style="position: relative; flex: 1; min-height: 0;">
     <div id="loading">Memuat editor...</div>
@@ -152,7 +153,19 @@
     </div>
   </div>
 </div>
+<script>
+const tombolHapus = document.getElementById('btn-backspace');
 
+tombolHapus.addEventListener('click', () => {
+    const range = miEditor.getSelection(); 
+    
+    miEditor.executeEdits("sumber-hapus", [{
+        range: range,
+        text: "",
+        forceMoveMarkers: true
+    }]);
+});
+</script>
 <script>
   window.addEventListener('error', (e) => {
     showError('Error: ' + e.message + '\n' + (e.filename || '') + ':' + (e.lineno || ''));
